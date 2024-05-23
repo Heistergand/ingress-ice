@@ -1,4 +1,3 @@
 *.cmd        eol=crlf
-*.md         eol=crlf
-*.sample     eol=crlf
+
 
