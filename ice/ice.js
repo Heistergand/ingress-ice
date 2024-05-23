@@ -7,29 +7,38 @@
 
 "use strict";
 
-/*global phantom */
-/*global require */
-/*global ice */
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const fs = require('fs');
+const path = require('path');
 
-var system    = require('system');
-var args      = system.args;
-var fs        = require('fs');
-var version   = '4.5.3';
-var filename  = 'ice.js';
-var iceFolder = args[0].substring(0, args[0].length - filename.length) + 'modules/';
-var iceModules= fs.list(iceFolder).sort();
+puppeteer.use(StealthPlugin());
 
-/*
- * Loads all scripts in the 'modules' folder
- */
-function loadModules() {
-  for(var i = 0; i < iceModules.length; i++) {
-    var file = iceFolder + iceModules[i];
-    if(fs.isFile(file)){
-      phantom.injectJs(file);
+(async () => {
+    const args = process.argv.slice(2);
+    const filename = 'ice.js';
+    const iceFolder = args[0].substring(0, args[0].length - filename.length) + 'modules/';
+    const iceModules = fs.readdirSync(iceFolder).sort();
+
+    const browser = await puppeteer.launch({ headless: "new" });
+    const page = await browser.newPage();
+
+    global.page = page;
+    global.browser = browser;
+
+    /*
+     * Loads all scripts in the 'modules' folder
+     */
+    function loadModules() {
+        for (const module of iceModules) {
+            const file = path.join(iceFolder, module);
+            if (fs.lstatSync(file).isFile()) {
+                require(file);
+            }
+        }
     }
-  }
-}
 
-loadModules();
-window.setTimeout(ice, 1000);
+    loadModules();
+    setTimeout(global.ice, 1000);
+})();
+

@@ -1,4 +1,3 @@
-
 @echo off
 SETLOCAL EnableDelayedExpansion
 REM ingress-ice start script
@@ -23,10 +22,10 @@ IF EXIST "ingress-ice.conf" (
         GOTO :start
 )
 IF EXIST %FILE% (
-	GOTO :start
+    GOTO :start
 ) else (
         copy ice\ingress-ice.conf.sample %FILE%
-	GOTO :config
+    GOTO :config
 )
 :config
 cls
@@ -42,7 +41,7 @@ notepad %FILE%
 cls
 echo Existing config file found (%FILE%). Starting ice...
 if '%COUNT%' NEQ '' echo Taking %COUNT% screenshots...
-phantomjs.exe --ignore-ssl-errors=true ice\ice.js %FILE% %COUNT%
+node.exe ice\ice.js %FILE% %COUNT%
 pause
 goto :eof
 :help

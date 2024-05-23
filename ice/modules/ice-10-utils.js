@@ -4,7 +4,6 @@
  */
 
 /*global version */
-/*global phantom */
 
 /**
  * console.log() wrapper
@@ -66,7 +65,7 @@ function quit(err) {
   } else {
     announce('Quit');
   }
-  phantom.exit();
+  process.exit(); // Replace phantom.exit() with process.exit() for Node.js compatibility.
 }
 
 /**
@@ -75,4 +74,3 @@ function quit(err) {
 function greet() {
   console.log('\n     _____ )   ___      _____) \n    (, /  (__/_____)  /        \n      /     /         )__      \n  ___/__   /        /          \n(__ /     (______) (_____)  v' + version + '\n\nhttps://ingress.netlify.com');
 }
-

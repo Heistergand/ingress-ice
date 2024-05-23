@@ -8,8 +8,8 @@ SCRIPT_HOME=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 COUNT=""
 MACHINE_TYPE=`uname -m`
 
-PHANTOMJS="$SCRIPT_HOME/phantomjs"
-PHANTOMJS_FLAGS="--ignore-ssl-errors=true"
+NODE="node"
+ICE_JS="$SCRIPT_HOME/ice/ice.js"
 
 if (command -v dialog >/dev/null)
 then
@@ -39,10 +39,10 @@ launch() {
     ARGS="$1 $2"
     if [ ! $LOOP ]
     then
-      $PHANTOMJS $PHANTOMJS_FLAGS "$SCRIPT_HOME/ice/ice.js" $ARGS; exit;
+      $NODE "$ICE_JS" $ARGS; exit;
     else
       while :; do
-        $PHANTOMJS $PHANTOMJS_FLAGS "$SCRIPT_HOME/ice/ice.js" $ARGS
+        $NODE "$ICE_JS" $ARGS
       done
     fi
   else

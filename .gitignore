@@ -10,3 +10,43 @@
 ## File-based project format:
 *.ipr
 *.iws
+
+
+# Node modules
+node_modules/
+
+# Puppeteer Chromium cache
+.puppeteer/
+
+# Debug log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python virtual environments
+venv/
+__pycache__/
+
+# MacOS system files
+.DS_Store
+
+# Log files
+*.log
+
+# Configuration files
+.ingress-ice.conf
+
+# Sensitive data files
+*.env
+secrets/
+.secrets
+.secrets/
+
+# Other potential cache or build directories
+coverage/
+dist/
+build/
+tmp/
+
+# Exclude screenshots 
+screenshots/

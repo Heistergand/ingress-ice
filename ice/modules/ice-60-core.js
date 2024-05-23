@@ -17,16 +17,15 @@
 /*global addCookies */
 /*global main */
 /*global ssnum */
-/*global phantom */
+/*global browser */
 /*global addTimestamp */
 /*global afterCookieLogin */
+/*global uploadS3 */
+/*global uploadDropbox */
 
-/**
- * Screenshot wrapper
- */
-function s(file) {
+async function s(file) {
   announce('Screen saved');
-  page.render(file);
+  await page.screenshot({ path: file });
 }
 
 /**
@@ -35,9 +34,9 @@ function s(file) {
  * @var {number} ssnum
  */
 function count() {
-  if ((curnum >= ssnum)&&(ssnum !== 0)) {
-    announce('Finished sucessfully. Exiting...\nThanks for using ingress-ice!');
-    phantom.exit();
+  if ((curnum >= ssnum) && (ssnum !== 0)) {
+    announce('Finished successfully. Exiting...\nThanks for using ingress-ice!');
+    browser.close(); // Close Puppeteer browser
   } else if (ssnum !== 0) {
     announce('Screen #' + (curnum + 1) + '/' + ssnum + ' captured');
     curnum++;
@@ -51,8 +50,8 @@ function count() {
 function hideDebris(iitcz) {
   if (iitcz) {
     window.setTimeout(function() {
-      page.evaluate(function() {
-        if (document.querySelector('#chat'))                      {document.querySelector('#chat').style.display = 'none';}
+      page.evaluate(() => {
+        if (document.querySelector('#chat')) {document.querySelector('#chat').style.display = 'none';}
         if (document.querySelector('#chatcontrols'))              {document.querySelector('#chatcontrols').style.display = 'none';}
         if (document.querySelector('#chatinput'))                 {document.querySelector('#chatinput').style.display = 'none';}
         if (document.querySelector('#portal_highlight_select'))   {document.querySelector('#portal_highlight_select').style.display = 'none';}
@@ -63,8 +62,8 @@ function hideDebris(iitcz) {
       });
     }, 2000);
   } else {
-    page.evaluate(function() {
-      if (document.querySelector('#comm'))             {document.querySelector('#comm').style.display = 'none';}
+    page.evaluate(() => {
+      if (document.querySelector('#comm')) {document.querySelector('#comm').style.display = 'none';}
       if (document.querySelector('#player_stats'))     {document.querySelector('#player_stats').style.display = 'none';}
       if (document.querySelector('#game_stats'))       {document.querySelector('#game_stats').style.display = 'none';}
       if (document.querySelector('#geotools'))         {document.querySelector('#geotools').style.display = 'none';}
@@ -73,7 +72,7 @@ function hideDebris(iitcz) {
       if (document.querySelectorAll('.img_snap')[0])   {document.querySelectorAll('.img_snap')[0].style.display = 'none';}
       if (document.querySelector('#display_msg_text')) {document.querySelector('#display_msg_text').style.display = 'none';}
     });
-    page.evaluate(function() {
+    page.evaluate(() => {
       var hide = document.querySelectorAll('.gmnoprint');
       for (var index = 0; index < hide.length; ++index) {
         hide[index].style.display = 'none';
@@ -92,9 +91,9 @@ function hideDebris(iitcz) {
 function prepare(iitcz, widthz, heightz) {
   if (iitcz) {
     window.setTimeout(function() {
-      page.evaluate(function(w, h) {
-        var water = document.createElement('p');
-        water.id='viewport-ice';
+      page.evaluate((w, h) => {
+        const water = document.createElement('p');
+        water.id = 'viewport-ice';
         water.style.position = 'absolute';
         water.style.top = '0';
         water.style.marginTop = '0';
@@ -104,11 +103,11 @@ function prepare(iitcz, widthz, heightz) {
         water.style.height = h;
         document.querySelectorAll('body')[0].appendChild(water);
       }, widthz, heightz);
-      var selector = "#viewport-ice";
+      const selector = "#viewport-ice";
       setElementBounds(selector);
     }, 4000);
   } else {
-    var selector = "#map_canvas";
+    const selector = "#map_canvas";
     setElementBounds(selector);
   }
 }
@@ -118,30 +117,33 @@ function prepare(iitcz, widthz, heightz) {
  * @param selector
  */
 function setElementBounds(selector) {
-  page.clipRect = page.evaluate(function(selector) {
-    var clipRect = document.querySelector(selector).getBoundingClientRect();
+  page.evaluate(selector => {
+    const clipRect = document.querySelector(selector).getBoundingClientRect();
     return {
-      top:    clipRect.top,
-      left:   clipRect.left,
-      width:  clipRect.width,
+      top: clipRect.top,
+      left: clipRect.left,
+      width: clipRect.width,
       height: clipRect.height
     };
-  }, selector);
+  }, selector).then(bounds => {
+    page.setViewport({ width: bounds.width, height: bounds.height });
+    page.setClip({ x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height });
+  });
 }
 
 /**
  * Checks if human presence not detected and makes a human present
  * @since 2.3.0
  */
-function humanPresence() {
-  var outside = page.evaluate(function() {
+async function humanPresence() {
+  const outside = await page.evaluate(() => {
     return !!(document.getElementById('butterbar') && (document.getElementById('butterbar').style.display !== 'none'));
   });
   if (outside) {
-    var rekt = page.evaluate(function() {
+    const rekt = await page.evaluate(() => {
       return document.getElementById('butterbar').getBoundingClientRect();
     });
-    page.sendEvent('click', rekt.left + rekt.width / 2, rekt.top + rekt.height / 2);
+    await page.mouse.click(rekt.left + rekt.width / 2, rekt.top + rekt.height / 2);
   }
 }
 
@@ -149,32 +151,32 @@ function humanPresence() {
  * Does postprocessing like uploading to AWS, Dropbox, etc.
  * @arg file {String}
  */
-function postprocess (file) {
+function postprocess(file) {
   // The reason why only one of them can be processed is because the file may be deleted.
   if (config.S3Key) {
     announce('Uploading to Amazon S3...');
-    uploadS3(config.S3Key, config.S3Secret, config.S3Bucket, config.S3Alc, config.directory+file, config.S3Remove);
+    uploadS3(config.S3Key, config.S3Secret, config.S3Bucket, config.S3Alc, config.directory + file, config.S3Remove);
   } else if (config.DropboxToken) {
     announce('Uploading to Dropbox...');
-    uploadDropbox(config.DropboxToken, config.DropboxPath+file, config.directory+file, config.DropboxRemove);
+    uploadDropbox(config.DropboxToken, config.DropboxPath + file, config.directory + file, config.DropboxRemove);
   }
 }
 
 /**
  * Main function.
  */
-function main() {
+async function main() {
   count();
   if (config.timestamp) {
-    page.evaluate(function() {
+    await page.evaluate(() => {
       if (document.getElementById('watermark-ice')) {
-        var oldStamp = document.getElementById('watermark-ice');
+        const oldStamp = document.getElementById('watermark-ice');
         oldStamp.parentNode.removeChild(oldStamp);
       }
     });
   }
   if (config.iitc) {
-    page.evaluate(function() {
+    await page.evaluate(() => {
       idleReset();
       // If 'Reload IITC' window appears...
       if (window.blockOutOfDateRequests) {
@@ -182,20 +184,21 @@ function main() {
       }
     });
   } else {
-    humanPresence();
-    hideDebris(config.iitc);
+    await humanPresence();
+    await hideDebris(config.iitc);
   }
-  window.setTimeout(function() {
+  setTimeout(async () => {
     if (config.timestamp) {
-      addTimestamp(getDateTime(0, config.timezone), config.iitc);
+      await addTimestamp(getDateTime(0, config.timezone), config.iitc);
     }
-    if (config.format == undefined || config.format == '') {
+    let lastScreen;
+    if (config.format == undefined || config.format === '') {
       lastScreen = 'ice-' + getDateTime(1, config.timezone) + '.png';
     } else {
       lastScreen = 'ice-' + getDateTime(1, config.timezone) + '.' + config.format;
     }
-    file = folder + lastScreen;
-    s(file);
+    const file = folder + lastScreen;
+    await s(file);
     postprocess(lastScreen);
   }, 2000);
 }
@@ -203,19 +206,19 @@ function main() {
 /**
  * Starter
  */
-function ice() {
+async function ice() {
   greet();
-  if (config.sessionid == undefined || config.sessionid == '') {
-    loadCookies();
+  if (config.sessionid == undefined || config.sessionid === '') {
+    await loadCookies();
   }
-  if (config.sessionid == undefined || config.sessionid == '') {
-    firePlainLogin();
+  if (config.sessionid == undefined || config.sessionid === '') {
+    await firePlainLogin();
   } else {
     if (config.sessionid == undefined) {
-        config.sessionid=''
+      config.sessionid = '';
     }
-    addCookies(config.CSRF, config.sessionid);
+    await addCookies(config.CSRF, config.sessionid);
     announce('Using cookies to log in');
-    afterCookieLogin();
+    await afterCookieLogin();
   }
 }

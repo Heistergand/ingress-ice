@@ -3,12 +3,16 @@
  * @license MIT
  */
 
-/*global fs */
-/*global quit */
+/*global announce */
 /*global args */
+/*global quit */
 
-var cookiespath = '.iced_cookies';
-var config = configure(args[1]);
+const fs = require('fs');
+const path = require('path');
+const puppeteer = require('puppeteer-extra');
+
+const cookiespath = '.iced_cookies';
+const config = configure(args[1]);
 
 // Check if no login/password/link provided
 if (
@@ -27,11 +31,11 @@ if (
 }
 
 if (config.directory == '' || config.directory == undefined) {
-  config.directory = 'screenshots/'
+  config.directory = 'screenshots/';
 }
 
-var folder = fs.workingDirectory + '/' + config.directory;
-var ssnum = 0;
+const folder = path.join(process.cwd(), config.directory);
+let ssnum = 0;
 if (args[2]) {
   ssnum = parseInt(args[2], 10);
 }
@@ -39,7 +43,7 @@ if (args[2]) {
 /**
  * Counter for number of screenshots
  */
-var curnum       = 0;
+let curnum = 0;
 
 /**
  * Take single screenshot and exit via setting delay=-1
@@ -55,7 +59,7 @@ if (config.delay == -1) {
  * Delay between logging in and checking if successful
  * @default 10000
  */
-var loginTimeout = config.loginTimeout;
+let loginTimeout = config.loginTimeout;
 if (loginTimeout == undefined || loginTimeout == '') {
   loginTimeout = 10000;
 }
@@ -70,47 +74,54 @@ if (config.timezone == undefined || config.timezone == '') {
 /**
  * twostep auth trigger
  */
-var twostep      = 0;
-var webpage      = require('webpage');
-var page         = webpage.create();
-page.onConsoleMessage = function() {};
-page.onError  = function() {};
+let twostep = 0;
+let page;
 
-if (config.consoleLog !== undefined && config.consoleLog !== '') {
-  page.onConsoleMessage = function(msg, lineNum, sourceId) {
-    try {
-      fs.write(config.consoleLog, msg + '\n', 'a');
-    } catch(e) {
-      announce(e);
-    }
-  };
-}
+(async () => {
+  const browser = await puppeteer.launch({ headless: "new" });
+  page = await browser.newPage();
+  page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  page.on('error', err => console.error('PAGE ERROR:', err));
+
+  if (config.consoleLog !== undefined && config.consoleLog !== '') {
+    page.on('console', async msg => {
+      try {
+        fs.appendFileSync(config.consoleLog, msg.text() + '\n');
+      } catch (e) {
+        announce(e);
+      }
+    });
+  }
 
 /**
  * aborting unnecessary API
  * @since 4.0.0
  * @author c2nprds
  */
-if (!config.iitc) {
-  page.onResourceRequested = function(requestData, request) {
-    if (requestData.url.match(/(getGameScore|getPlexts|getPortalDetails)/g)) {
-      request.abort();
-    }
-  };
-}
+  if (!config.iitc) {
+    page.on('request', request => {
+      const url = request.url();
+      if (url.match(/(getGameScore|getPlexts|getPortalDetails)/g)) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+  }
 
 /** @function setVieportSize */
-if (!config.iitc) {
-  page.viewportSize = {
-    width: config.width + 42,
-    height: config.height + 167
-  };
-} else {
-  page.viewportSize = {
-    width: config.width,
-    height: config.height
-  };
-}
+  if (!config.iitc) {
+    await page.setViewport({
+      width: config.width + 42,
+      height: config.height + 167
+    });
+  } else {
+    await page.setViewport({
+      width: config.width,
+      height: config.height
+    });
+  }
+})();
 
 /**
  * Parse the configuration .conf file
@@ -118,15 +129,15 @@ if (!config.iitc) {
  * @param {String} path
  */
 function configure(path) {
-  var settings = {};
-  var settingsfile = fs.open(path, 'r');
-  while(!settingsfile.atEnd()) {
-    var line = settingsfile.readLine();
+  const settings = {};
+  const settingsfile = fs.readFileSync(path, 'utf-8');
+  const lines = settingsfile.split('\n');
+  lines.forEach(line => {
     if (!(line[0] === '#' || line[0] === '[' || line.indexOf('=', 1) === -1)) {
-      var pos = line.indexOf('=', 1);
-      var key = line.substring(0,pos);
-      var value = line.substring(pos + 1);
-      if (value == 'false') {
+      const pos = line.indexOf('=', 1);
+      const key = line.substring(0, pos).trim();
+      let value = line.substring(pos + 1).trim();
+      if (value === 'false') {
         settings[key] = false;
       } else if (/^-?[\d.]+(?:e-?\d+)?$/.test(value) && value !== '') {
         settings[key] = parseInt(value, 10);
@@ -134,7 +145,6 @@ function configure(path) {
         settings[key] = value;
       }
     }
-  }
-  settingsfile.close();
+  });
   return settings;
 }
