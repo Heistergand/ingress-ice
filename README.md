@@ -1,9 +1,16 @@
 # Automatic screenshooter for ingress intel map.
 
-v5.0.0 "ppt" fork. - A port to puppeteer, because PhantomJS is discontinued. 
+v5.0.0 "ppt" fork. - A fork portes to puppeteer, because PhantomJS is discontinued. 
 
-# This fork is NOT TESTED YET and absolutely WORK IN PROGRESS.
+
+## Disclaimer regarding this fork
+### This fork is NOT TESTED YET and absolutely WORK IN PROGRESS.
 Contributors welcome.
+
+### Usage of modern technology
+YES, I'll say it right away: I ported it all with the help of an AI. Nevertheless, it took a few nights of my time to understand everything and to make it clear to the AI what I actually want from it. And NO: unfortunately I haven't got it to fly yet. I might actually be at that point now, but I'm too tired, the sun has already risen again and I should get a quick three to four hours' sleep. So if you (yes, EXACTLY YOU!) feel called to test this project, don't be shy, but write down what doesn't work and create an issue. Or maybe you can correct the error yourself, then clone this branch and create a pull request with your corrections.
+
+Heistergand
 
 Features:
 =========
