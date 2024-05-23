@@ -1,6 +1,9 @@
-Automatic screenshooter for ingress intel map.
+# Automatic screenshooter for ingress intel map.
 
-v4.5.3 "final" release. Development will not be continued.
+v5.0.0 "ppt" fork. - A port to puppeteer, because PhantomJS is discontinued. 
+
+# This fork is NOT TESTED YET and absolutely WORK IN PROGRESS.
+Contributors welcome.
 
 Features:
 =========
