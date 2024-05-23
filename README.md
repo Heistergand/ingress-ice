@@ -1,5 +1,3 @@
-[ingress-ice](http://ingress.netlify.com/)
-===========
 Automatic screenshooter for ingress intel map.
 
 v4.5.3 "final" release. Development will not be continued.
